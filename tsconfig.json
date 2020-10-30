@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    /* es2020 support - https://stackoverflow.com/a/59787575/14040620 */
+    "target": "es2019",
+    "module": "commonjs",
+    "lib": ["es2020"],
+    "typeRoots": [ "./types", "./node_modules/@types"],
+    "allowJs": true,
+    "outDir": "build",
+    "rootDir": "src",
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  }
+}
