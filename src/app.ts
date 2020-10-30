@@ -22,57 +22,66 @@ const app = uWS./*SSL*/App({
   connection.query({
     sql: 'SELECT * FROM `user`;'
   },
-  function(error: any, results: any, fields: any) {
-    if (error) {
-      console.log(error);
-    }
-    res.end(""+results.map((x:any) => x.username).join(" "));
-  });
+    function(error: any, results: any, fields: any) {
+      if (error) {
+        console.log(error);
+      }
+      res.end("" + results.map((x: any) => x.username).join(" "));
+    });
   res.onAborted(() => {
     res.end("erreur")
   });
 })
-.post('/user/login', (res: any, req: any) => {
-  let url = req.getUrl();
+  .post('/user/login', (res: any, req: any) => {
+    let url = req.getUrl();
 
-  readJson(res, (obj:any) => {
-    if(obj.username && obj.password) {
-      let hash = crypto.createHash('sha256').update(obj.password).digest('base64');
-      connection.query("SELECT * FROM user where username = ? limit 1",[obj.username], function (err:any, result:any) {
-        if(err) console.log(err);
-        if(result[0].password === hash) {
-          res.end("Bon mot de passe.");
-        } else {
-          res.end("Mauvais mot de passe.");
-        }
-      })
+    readJson(res, (obj: any) => {
+      if (obj.username && obj.password) {
+        let hash = crypto.createHash('sha256').update(obj.password).digest('base64');
+        connection.query("SELECT * FROM user where username = ? limit 1", [obj.username], function(err: any, result: any) {
+          if (err) console.log(err);
+          if (result[0]?.password === hash) {
+            res.end("Bon mot de passe.");
+          } else {
+            res.end("Utilisateur inexistant ou mauvais mot de passe.");
+          }
+        })
 
-    } else {
-      res.end("Des datas sont manquantes.");
-    }
-  }, () => {
-    console.log('JSON invalide ou aucune donnée.');
-  });
-})
-.post('/user/register', (res: any, req: any) => {
-  let url = req.getUrl();
-
-  readJson(res, (obj:any) => {
-    if(obj.username && obj.password && obj.email) {
-      let hash = crypto.createHash('sha256').update(obj.password).digest('base64');
-      connection.query("INSERT INTO user (userName, password, email) VALUES (?)",[[obj.username,hash,obj.email]], function (err:any, result:any) {
-        if(err) console.log(err);
-        res.end("Gg !");
-      })
-
-    } else {
-      res.end("Des datas sont manquantes.");
-    }
-  }, () => {
-    console.log('JSON invalide ou aucune donnée.');
-  });
-})
-.listen(port, (token: any) => {
+      } else {
+        res.end("Des datas sont manquantes.");
+      }
+    }, () => {
+      console.log('JSON invalide ou aucune donnée.');
+    });
+  })
+  .post('/user/register', (res: any, req: any) => {
+    let url = req.getUrl();
+    readJson(res, (obj: any) => {
+      if (obj.username && obj.password && obj.email) {
+        let hash = crypto.createHash('sha256').update(obj.password).digest('base64');
+        connection.query("SELECT * FROM user where username = ? limit 1", [obj.username], function(err: any, result: any) {
+          if (err) console.log(err);
+          if (result[0] !== undefined) {
+            res.end("Utilisateur déjà pris.");
+          } else {
+            if (obj.username.length < 3 || obj.username.length > 15) {
+              res.end("Merci de choisir un nom d'utilisateur entre 3 et 15 caractères.");
+            } else {
+              connection.query("INSERT INTO user (userName, password, email) VALUES (?)", [[obj.username, hash, obj.email]], function(error: any, resultat: any) {
+                if (error) console.log(error);
+                res.end("Gg ! Compte créé.");
+              })
+            }
+          }
+        });
+      } else {
+        res.end("Des datas sont manquantes.");
+      }
+    }, () => {
+      console.log('JSON invalide ou aucune donnée.');
+    });
+  })
+  .listen(port, (token: any) => {
     if (token) {
       console.log('Listening to port ' + port);
     } else {
@@ -81,37 +90,37 @@ const app = uWS./*SSL*/App({
   });
 
 // see https://github.com/uNetworking/uWebSockets.js/blob/master/examples/JsonPost.js
-function readJson(res:any, cb:any, err:any) {
-  let buffer:any;
-  res.onData((ab:any, isLast:any) => {
+function readJson(res: any, cb: any, err: any) {
+  let buffer: any;
+  res.onData((ab: any, isLast: any) => {
     let chunk = Buffer.from(ab);
     if (isLast) {
-      let json:any;
+      let json: any;
       if (buffer) {
         try {
           json = JSON.parse(Buffer.concat([buffer, chunk]).toString());
-        } catch (e:any) {
-            res.close();
-            return;
-          }
-          cb(json);
-        } else {
-          try {
-            json = JSON.parse(chunk.toString());
-          } catch (e) {
-            res.close();
-            return;
-          }
-          cb(json);
+        } catch (e: any) {
+          res.close();
+          return;
         }
+        cb(json);
       } else {
-        if (buffer) {
-          buffer = Buffer.concat([buffer, chunk]);
-        } else {
-          buffer = Buffer.concat([chunk]);
+        try {
+          json = JSON.parse(chunk.toString());
+        } catch (e) {
+          res.close();
+          return;
         }
+        cb(json);
       }
-    });
+    } else {
+      if (buffer) {
+        buffer = Buffer.concat([buffer, chunk]);
+      } else {
+        buffer = Buffer.concat([chunk]);
+      }
+    }
+  });
 
-    res.onAborted(err);
-  }
+  res.onAborted(err);
+}
