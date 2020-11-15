@@ -1,93 +1,63 @@
-const crypto = require('crypto');
 const uWS = require('uWebSockets.js');
+import * as email from "./email";
+import * as sql from "./sql"
+import { userSimple, userLogin } from "./interfaces/user";
+
+const errors = require("../config/errors.json");
+
+const dotenv = require('dotenv');
+dotenv.config();
 
 const port = 9001;
-
-var mysql = require('mysql');
-var connection = mysql.createConnection({
-  host: 'localhost',
-  port: 3306,
-  user: 'root',
-  password: 'root',
-  database: 'user'
-});
-
-connection.connect();
 
 const app = uWS./*SSL*/App({
   key_file_name: 'misc/key.pem',
   cert_file_name: 'misc/cert.pem',
   passphrase: '1234'
 }).get('/user/list', (res: any, req: any) => {
-  connection.query({
-    sql: 'SELECT * FROM `user`;'
-  },
-    function(error: any, results: any, fields: any) {
-      if (error) {
-        console.log(error);
-      }
-      res.end("" + results.map((x: any) => x.username).join(" "));
-    });
+  sql.listOfUsers((list: string) => {
+    res.end(list);
+  });
   res.onAborted(() => {
-    res.end("erreur")
+    res.end(errors.responses_aborted)
   });
 })
-  .post('/user/login', (res: any, req: any) => {
-    let url = req.getUrl();
-
-    readJson(res, (obj: any) => {
-      if (obj.username && obj.password) {
-        let hash = crypto.createHash('sha256').update(obj.password).digest('base64');
-        connection.query("SELECT * FROM user where username = ? limit 1", [obj.username], function(err: any, result: any) {
-          if (err) console.log(err);
-          if (result[0]?.password === hash) {
-            res.end("Bon mot de passe.");
-          } else {
-            res.end("Utilisateur inexistant ou mauvais mot de passe.");
-          }
-        })
-
-      } else {
-        res.end("Des datas sont manquantes.");
-      }
-    }, () => {
-      console.log('JSON invalide ou aucune donnée.');
-    });
-  })
-  .post('/user/register', (res: any, req: any) => {
-    let url = req.getUrl();
-    readJson(res, (obj: any) => {
-      if (obj.username && obj.password && obj.email) {
-        let hash = crypto.createHash('sha256').update(obj.password).digest('base64');
-        connection.query("SELECT * FROM user where username = ? limit 1", [obj.username], function(err: any, result: any) {
-          if (err) console.log(err);
-          if (result[0] !== undefined) {
-            res.end("Utilisateur déjà pris.");
-          } else {
-            if (obj.username.length < 3 || obj.username.length > 15) {
-              res.end("Merci de choisir un nom d'utilisateur entre 3 et 15 caractères.");
-            } else {
-              connection.query("INSERT INTO user (userName, password, email) VALUES (?)", [[obj.username, hash, obj.email]], function(error: any, resultat: any) {
-                if (error) console.log(error);
-                res.end("Gg ! Compte créé.");
-              })
-            }
-          }
-        });
-      } else {
-        res.end("Des datas sont manquantes.");
-      }
-    }, () => {
-      console.log('JSON invalide ou aucune donnée.');
-    });
-  })
-  .listen(port, (token: any) => {
-    if (token) {
-      console.log('Listening to port ' + port);
+.post('/user/login', (res: any, req: any) => {
+  readJson(res, (obj: userLogin) => {
+    if (obj.username && obj.password) {
+      sql.login(obj, (message: String) => res.end(message))
     } else {
-      console.log('Failed to listen to port ' + port);
+      res.end(errors.no_all_data);
     }
+  }, () => {
+    console.log(errors.invalid_json);
   });
+})
+.post('/user/register', (res: any, req: any) => {
+  readJson(res, (obj: any) => {
+    if (obj.username && obj.password && obj.email) {
+      sql.preRegistration(obj, (message: string) => res.end(message))
+    } else {
+      res.end(errors.no_all_data);
+    }
+  }, () => {
+    console.log(errors.invalid_json);
+  });
+})
+.post("/user/register/code", (res: any, req: any) => {
+  readJson(res, (obj: any) => {
+    email.verifyVerification(obj.email, obj.code, (message: string) => res.end(message));
+  }, () => {
+    console.log(errors.invalid_json);
+  });
+})
+.listen(port, (token: any) => {
+  if (token) {
+    console.log('Listening to port ' + port);
+  } else {
+    console.log('Failed to listen to port ' + port);
+  }
+});
 
 // see https://github.com/uNetworking/uWebSockets.js/blob/master/examples/JsonPost.js
 function readJson(res: any, cb: any, err: any) {

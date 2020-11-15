@@ -1,0 +1,10 @@
+{
+  "invalid_json" : "JSON invalide ou aucune data.",
+  "no_all_data" : "Des datas sont manquantes.",
+  "no_user_or_bad_password" : "Utilisateur inexistant ou mauvais mot de passe.",
+  "username_already_exists" : "Nom d'utilisateur déjà pris.",
+  "username_too_long_or_too_short" : "Merci de choisir un nom d'utilisateur entre 3 et 15 caractères.",
+  "no_verification_code_in_pending" : "Aucun code de vérification en attente",
+  "invalid_code" : "Code invalide.",
+  "responses_aborted" : "Réponse interrompue."
+}
