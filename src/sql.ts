@@ -1,4 +1,4 @@
-import {userSimple,userLogin} from "./interfaces/user";
+import { userSimple, userLogin } from "./interfaces/user";
 const mysql = require('mysql');
 const crypto = require('crypto');
 import * as email from "./email";
@@ -16,7 +16,7 @@ const connection = mysql.createConnection({
 
 connection.connect();
 
-export function listOfUsers(cb:any) {
+export function listOfUsers(cb: any) {
   connection.query({
     sql: 'SELECT * FROM `user`;'
   },
@@ -28,10 +28,10 @@ export function listOfUsers(cb:any) {
     });
 }
 
-export function login(user:userLogin, cb:any) {
+export function login(user: userLogin, cb: any) {
   connection.query("SELECT * FROM user where username = ? limit 1", user.username, function(err: any, result: any) {
     if (err) console.log(err);
-    if (result[0]?.password === crypto.createHash('sha256').update(user.password).digest('base64')) {
+    if (result[0] ?.password === crypto.createHash('sha256').update(user.password).digest('base64')) {
       cb("Password is correct");
     } else {
       cb(errors.no_user_or_bad_password);
@@ -39,7 +39,7 @@ export function login(user:userLogin, cb:any) {
   })
 }
 
-export function preRegistration(user:userSimple, cb:any) {
+export function preRegistration(user: userSimple, cb: any) {
   connection.query("SELECT * FROM user where username = ? limit 1", [user.username], function(err: any, result: any) {
     if (err) console.log(err);
     if (result[0] !== undefined) {
@@ -48,7 +48,7 @@ export function preRegistration(user:userSimple, cb:any) {
       if (user.username.length < 3 || user.username.length > 15) {
         cb(errors.username_too_long_or_too_short);
       } else {
-        email.sendVerification(user, (message:string) => {
+        email.sendVerification(user, (message: string) => {
           cb("Code sent.");
         })
       }
@@ -56,7 +56,7 @@ export function preRegistration(user:userSimple, cb:any) {
   });
 }
 
-export function register(user:any, cb:any) {
+export function register(user: any, cb: any) {
   connection.query("SELECT * FROM user where username = ? limit 1", [user.username], function(err: any, result: any) {
     if (err) console.log(err);
     if (result[0] !== undefined) {
